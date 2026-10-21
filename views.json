@@ -1,13 +1,51 @@
 [
   {
     "name": "week",
-    "title": "This week",
-    "subtitle": "Product Registrations for Claude Code: what needs attention, rendered by npm run view",
+    "title": "Registrations this week",
+    "subtitle": "What needs a person, worst first. Read-only. Changes are made by asking Claude Code.",
     "sections": [
       {
         "title": "Needs attention",
-        "note": "TODO(author): point this at the industry's attention view (overdue, stuck, quiet).",
-        "sql": "select 'replace me' as item, 'TODO(author)' as why"
+        "sql": "select item, ref, product, owner, detail, due_on as due, days_left from attention_queue order by rank, due_on, ref"
+      },
+      {
+        "title": "Due in the next 30 days",
+        "sql": "select due_on as due, days_left, label as what, ref, product, manager as owner from open_dates where days_left between 0 and 30 order by due_on, ref"
+      }
+    ]
+  },
+  {
+    "name": "calendar",
+    "title": "The regulatory calendar",
+    "subtitle": "Every open date for the next twelve months, with the rule behind it.",
+    "sections": [
+      {
+        "title": "Open dates",
+        "sql": "select due_on as due, days_left, label as what, ref, product, manager as owner, item as detail from open_dates where due_on <= current_date + 365 order by due_on, ref",
+        "note": "Renewal, levy, annual return, exemption and declaration dates come from the rules table. Invoices, conditions and commitments come from your own records."
+      },
+      {
+        "title": "Rule checks",
+        "sql": "select severity, rule, ref, finding from compliance_findings order by case severity when 'breach' then 0 else 1 end, rule, ref"
+      }
+    ]
+  },
+  {
+    "name": "portfolio",
+    "title": "The registration portfolio",
+    "subtitle": "Every registration by regulator and market, what is waiting, and what is on pack.",
+    "sections": [
+      {
+        "title": "Registrations",
+        "sql": "select ref, regulator, market, status, product, product_name, holder, granted_on as granted, expires_on as expires, case when ace then 'yes' else '' end as exempt, label_in_market, sales_last_fy_cents as sales_last_year from registration_register order by regulator, ref"
+      },
+      {
+        "title": "Submissions waiting",
+        "sql": "select s.code, r.ref, s.kind, s.title, s.lodged_on as lodged, current_date - s.lodged_on as days_waiting, s.owner from submissions s join registrations r on r.id = s.registration_id where s.outcome = 'pending' order by s.lodged_on"
+      },
+      {
+        "title": "Invoices not paid",
+        "sql": "select f.code, r.ref, f.kind, f.period, f.currency, f.amount_cents as amount, f.due_on as due, f.due_on - current_date as days_left from fees f join registrations r on r.id = f.registration_id where f.paid_on is null order by f.due_on"
       }
     ]
   }

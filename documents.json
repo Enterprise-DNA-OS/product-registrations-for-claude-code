@@ -1,11 +1,57 @@
 [
   {
-    "name": "example",
-    "title": "TODO(author): the first document this industry must produce",
-    "for_each": "select gen_random_uuid() as id, 'Example' as name",
-    "file": "name",
+    "name": "registration-summary",
+    "title": "Registration summary",
+    "for_each": "select id, ref from registrations order by ref",
+    "file": "ref",
     "sections": [
-      { "title": "Details", "sql": "select 'replace me' as item, $1::text as record_id" }
+      {
+        "title": "The registration",
+        "sql": "select ref, regulator, market, kind, status, product_name as product, holder, applied_on as applied, granted_on as granted, expires_on as expires, ended_on as ended, case when ace then 'yes' else 'no' end as annual_charge_exemption from registration_register where id = $1"
+      },
+      {
+        "title": "Conditions",
+        "sql": "select number, text from conditions where registration_id = $1 order by number"
+      },
+      {
+        "title": "Labels",
+        "sql": "select version, approved_on as approved, in_market_on as on_pack, retired_on as retired from labels where registration_id = $1 order by version"
+      },
+      {
+        "title": "Submissions",
+        "sql": "select code, kind, title, lodged_on as lodged, outcome, decided_on as decided from submissions where registration_id = $1 order by lodged_on desc"
+      },
+      {
+        "title": "Declarations and renewals",
+        "sql": "select kind as what, period_ending as period, lodged_on as lodged, receipt from declarations where registration_id = $1 union all select 'renewal', period_ending, lodged_on, receipt from renewals where registration_id = $1 order by period desc",
+        "note": "The record for an auditor, a buyer's due diligence or a distributor. Check it against the regulator's public register."
+      }
+    ]
+  },
+  {
+    "name": "levy-working-paper",
+    "title": "APVMA levy and annual return working paper",
+    "for_each": "select h.id, h.code from holders h where exists (select 1 from registrations r where r.holder_id = h.id and r.regulator = 'APVMA') order by h.code",
+    "file": "code",
+    "sections": [
+      {
+        "title": "Last financial year, by product",
+        "sql": "select r.ref, p.name as product, s.fy_ending as year_ending, s.value_cents as leviable_value, s.quantity, s.unit, (select d.lodged_on from declarations d where d.registration_id = r.id and d.kind = 'APVMA-LEVY' and d.period_ending = last_fy_end(current_date)) as value_declared, (select d.lodged_on from declarations d where d.registration_id = r.id and d.kind = 'APVMA-RETURN' and d.period_ending = last_fy_end(current_date)) as return_lodged from registrations r left join products p on p.id = r.product_id left join sales s on s.registration_id = r.id and s.fy_ending = last_fy_end(current_date) where r.holder_id = $1 and r.regulator = 'APVMA' and r.granted_on <= last_fy_end(current_date) order by r.ref",
+        "note": "Leviable value excludes GST and generally excludes exports. Declared by 31 October; the annual return of quantities before 30 November; the levy paid by 15 January."
+      }
+    ]
+  },
+  {
+    "name": "regulatory-calendar",
+    "title": "Regulatory calendar",
+    "for_each": "select h.id, h.code from holders h order by h.code",
+    "file": "code",
+    "sections": [
+      {
+        "title": "Open dates for the next twelve months",
+        "sql": "select o.due_on as due, o.days_left, o.label as what, o.ref, o.product, o.manager as owner from open_dates o join registrations r on r.id = o.registration_id where r.holder_id = $1 and o.due_on <= current_date + 365 order by o.due_on",
+        "note": "For the board or the managing director: every date a regulator or a condition puts on this company's registrations, and whose it is."
+      }
     ]
   }
 ]

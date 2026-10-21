@@ -1,0 +1,13 @@
+{
+  "Registration": "Registration Number",
+  "Regulator": "Health Authority",
+  "Status": "Registration Status",
+  "Product": "Product Family",
+  "Product name": "Product Name",
+  "Holder": "Registration Holder",
+  "Kind": "Registration Type",
+  "Applied": "Application Date",
+  "Granted": "Approval Date",
+  "Expires": "Expiration Date",
+  "Manager": "Owner"
+}
